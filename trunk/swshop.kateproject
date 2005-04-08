@@ -1,0 +1,23 @@
+[Dir lib]
+Dirs=model
+Files=config.py/__init__.py/textile.py
+
+[Dir lib/model]
+Dirs=
+Files=__init__.py/resource.py
+
+[Dir share]
+Dirs=images/locale/test
+Files=
+
+[Dir share/test]
+Dirs=
+Files=test_config.py/test_resource.py/testprep.py
+
+[Project Dir]
+Dirs=bin/doc/share/src/lib
+Files=
+
+[Project File]
+Name=Site Workshop
+Type=Default
