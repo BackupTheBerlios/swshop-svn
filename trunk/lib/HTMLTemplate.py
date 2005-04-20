@@ -273,7 +273,7 @@ class Parser(HTMLParser):
         self.__addText('<!%s>' % txt)
 
     def handle_pi(self, txt):
-        self.__addText('<?%s?>' % txt)
+        self.__addText('<?%s>' % txt)
     
     def result(self):
         # Get content of template's ElementCollector once parsing is done.
@@ -281,9 +281,9 @@ class Parser(HTMLParser):
         if element.nodeType != 'tem':
             raise ParseError, ("Can't complete template: node '%s:%s' wasn't "
                     "correctly closed.") % (element.nodeType, element.nodeName)
-        if len(element.content) == 1:
-            raise ParseError, "No special %r attributes were found." % (
-                    self. __specialAttributeName)
+        #if len(element.content) == 1:
+        #    raise ParseError, "No special %r attributes were found." % (
+        #            self. __specialAttributeName)
         return element.content
 
 
