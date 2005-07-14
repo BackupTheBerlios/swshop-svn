@@ -34,8 +34,8 @@ class HTMLHyperlinkTests(unittest.TestCase):
         self.link = resource.HTMLHyperlink(u'Python', \
             u'http://www.python.org/', **atts)
 
-    def test_asString(self):
-        link = self.link.asString()
+    def test_asHTML(self):
+        link = self.link.asHTML()
         href = 'href="http://www.python.org/"'
         title = 'title="Strona domowa języka Python"'
         accesskey = 'accesskey="p"'
@@ -53,8 +53,8 @@ class HTMLImageTests(unittest.TestCase):
             'http://www.python.org/snake.jpg', \
             u'Zdjęcie prawdziwego Pythona', **atts)
     
-    def test_asString(self):
-        img = self.img.asString()
+    def test_asHTML(self):
+        img = self.img.asHTML()
         src = 'src="http://www.python.org/snake.jpg"'
         alt = 'alt="Zdjęcie prawdziwego Pythona"'
         title = 'title="Naprawdę duży python!"'
@@ -71,8 +71,8 @@ class HTMLFragmentTests(unittest.TestCase):
             eksploatować.</p>'''
         self.fragment = resource.HTMLFragment('Rant', self.text)
     
-    def test_asString(self):
-        fragment = self.fragment.asString()
+    def test_asHTML(self):
+        fragment = self.fragment.asHTML()
         self.failUnless(self.text.encode('utf-8') == fragment)
 
 
@@ -83,8 +83,8 @@ class TextileFragmentTests(unittest.TestCase):
             czy rzeczywiście _jest się czym_ ekscytować?'''
         self.fragment = resource.TextileFragment('Test', self.text)
     
-    def test_asString(self):
-        fragment = self.fragment.asString()
+    def test_asHTML(self):
+        fragment = self.fragment.asHTML()
         self.failUnless(self.text.encode('utf-8') == fragment)
     
     def test_asHTMLFragment(self):

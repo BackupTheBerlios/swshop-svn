@@ -27,4 +27,5 @@ import os.path as op
 
 libPath = \
     op.join(op.dirname(op.dirname(op.dirname(op.abspath(sys.argv[0])))), 'lib')
+
 sys.path.insert(0, libPath)

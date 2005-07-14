@@ -1,6 +1,10 @@
+[Dir doc]
+Dirs=
+Files=COPYING/idea.html
+
 [Dir lib]
 Dirs=model
-Files=config.py/__init__.py/textile.py
+Files=config.py/__init__.py/textile.py/HTMLTemplate.py
 
 [Dir lib/model]
 Dirs=

@@ -29,19 +29,28 @@ class Resource:
     def __init__(self, name, **atts):
         self.name = name
         self.atts = atts
-
-    def attributesAsString(self):
+    
+    def attributesAsUnicode(self):
+        """Returns resource attributes as Python unicode object."""
         attlist = []
         for k, v in self.atts.items():
             attlist.append(u'%s="%s"' % (k, v))
         return u' '.join(attlist)
+
+    def attributesAsString(self, encoding='utf-8'):
+        """Returns resource attributes as encoded (byte) string in form of
+        key=value pairs. Encoding parameter specifies output string encoding, if
+        omitted it defaults to UTF-8."""
+        return self.attributesAsUnicode().encode(encoding)
     
     def asUnicode(self):
         """Quasi-abstract method, that must be implemented in descendant
         classes to provide resource representation as Python unicode object."""
         raise AbstractError, 'Method asUnicode() not implemented'
 
-    def asString(self, encoding='utf-8'):
+    def asHTML(self, encoding='utf-8'):
+        """Returns resource representation as encoded (byte) string. Encoding
+        parameter specifies string encoding, if omitted it defaults to UTF-8."""
         return self.asUnicode().encode(encoding)
 
 
@@ -53,7 +62,7 @@ class HTMLHyperlink(Resource):
         self.href = href
    
     def asUnicode(self):
-        atts = self.attributesAsString()
+        atts = self.attributesAsUnicode()
         return u'<a href="%s" %s>%s</a>' % (self.href, atts, self.name)        
 
 
@@ -66,7 +75,7 @@ class HTMLImage(Resource):
         self.alt = altText
     
     def asUnicode(self):
-        atts = self.attributesAsString()
+        atts = self.attributesAsUnicode()
         return u'<img src="%s" alt="%s" %s />' % (self.src, self.alt, atts)
 
 
@@ -84,17 +93,25 @@ class HTMLFragment(Resource):
 class TextileFragment(Resource):
     """Document fragment, written using Textile simplified markup; asString
     returns exact "raw" fragment, asHTMLFragment returns HTMLFragment 
-    instance."""
+    instance built from Textile processed content."""
     
-    def __init__(self, name, text):
+    def __init__(self, name, text, encoding='utf-8'):
+        """Creates TextileFragment instance (as Resource subclass) and sets
+        default Textile encoding. If encoding parameter is not specified, it
+        defaults to UTF-8. Text must be Python unicode object."""
         Resource.__init__(self, name)
+        if type(text) != type(u' '):
+            raise UnicodeError, 'Parameter "text" expected to be unicode object'
         self.text = text
-        textile.INPUT_ENCODING = 'utf-8'
-        textile.OUTPUT_ENCODING = 'utf-8'
+        textile.INPUT_ENCODING = encoding
+        textile.OUTPUT_ENCODING = encoding
     
     def asUnicode(self):
+        """Returns fragment contents as Python unicode object."""
         return self.text
     
     def asHTMLFragment(self):
-        text = self.text.encode('utf-8')
+        """Returns HTMLFragment (with the same name) instance built from
+        processed content."""
+        text = self.text.encode(textile.INPUT_ENCODING)
         return HTMLFragment(self.name, textile.textile(text))
