@@ -19,6 +19,8 @@
 # Site Workshop; if not, write to the Free Software Foundation, Inc.,
 # 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 
+__revision__ = '$Id$'
+
 import ConfigParser
 
 class Config(ConfigParser.SafeConfigParser):
@@ -41,6 +43,7 @@ class Config(ConfigParser.SafeConfigParser):
             pass
 
     def save(self):
+        """Save configuration to config file."""
         fp = open(self.fileName, 'w')
         try:
             self.write(fp)
@@ -51,13 +54,15 @@ class Config(ConfigParser.SafeConfigParser):
         """Method returns default value if section or option does not exist
         instead of raising exceptions."""
         try:
-            return self.get(section, option)
+            ret = self.get(section, option)
         except (ConfigParser.NoSectionError, ConfigParser.NoOptionError):
             return default
+        return ret.decode('utf-8')
 
     def setOption(self, section, option, value):
         """Method that sanitizes option values, just to be sure they are
-        always strings (Python 2.3 allows non-string values)."""
+        always strings (Python <2.4 allows non-string values, but later
+        produces weird results)."""
         if not self.has_section(section):
             self.add_section(section)
-        self.set(section, option, str(value))
+        self.set(section, option, value.encode('utf-8'))
