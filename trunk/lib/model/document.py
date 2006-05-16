@@ -41,7 +41,7 @@ class Section:
     
     def __init__(self, name):
         self.name = name
-        self.text = None
+        self.parts = []
 
 
 class Header(Section):
@@ -58,13 +58,24 @@ class Footer(Section):
         Section.__init__(self, 'footer')
 
 
+class MenuItem:
+    """Item in a menu"""
+    
+    def __init__(self, title, url):
+        self.title = title
+        self.url = url
+
+
 class Menu(Section):
     """List-based menu system"""
-    pass
+    
+    def __init__(self, name):
+        Section.__init__(self, name)
+        self.items = []
 
 
-class MainMenu(Menu):
+class MainMenuBar(Section):
     """Menu, shown somewhere once at the page"""
     
     def __init__(self):
-        Menu.__init__(self, 'main-menu')
+        Section.__init__(self, 'main-menu')
