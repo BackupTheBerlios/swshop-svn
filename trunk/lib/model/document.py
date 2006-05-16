@@ -28,25 +28,43 @@ import resource
 
 class Document:
     
-    def __init__(self):
-        self.sections = []
+    def __init__(self, title):
+        self.title = title
+        self.header = None
+        self.mainMenu = None
+        self.sections = {}
+        self.footer = None
 
 
 class Section:
-    pass
+    """Generic part of the document"""
+    
+    def __init__(self, name):
+        self.name = name
+        self.text = None
 
 
 class Header(Section):
-    pass
+    """Section, shown once at the top of each page"""
+    
+    def __init__(self):
+        Section.__init__(self, 'header')
 
 
 class Footer(Section):
-    pass
+    """Section, shown once at the bottom of each page"""
+    
+    def __init__(self):
+        Section.__init__(self, 'footer')
 
 
 class Menu(Section):
+    """List-based menu system"""
     pass
 
 
 class MainMenu(Menu):
-    pass
+    """Menu, shown somewhere once at the page"""
+    
+    def __init__(self):
+        Menu.__init__(self, 'main-menu')
