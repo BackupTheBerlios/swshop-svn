@@ -101,6 +101,11 @@ class ElementCollector:
 
 
 class Parser(HTMLParser):
+
+    def unescape(self, s):
+        # kludge: avoid HTMLParser's stupid mangling of attribute values
+        return s
+        
     # Handles parsing events sent by parseTemplate() as it processes
     # a template string. Collects data in ElementCollector instances, 
     # then converts these into Template/Repeater/Container objects
@@ -117,11 +122,12 @@ class Parser(HTMLParser):
     __invalidNodeNames = kwlist + [
             'content', 'raw', 'atts', 'omittags', 'omit', 'repeat', 'render']
     
-    def __init__(self, attribute, encoder, decoder):
+    def __init__(self, attribute, encoder, decoder, warn):
         HTMLParser.__init__(self)
         self.__specialAttributeName = attribute
         self.__encoder = encoder
         self.__decoder = decoder
+        self.__warn = warn
         # Each node's content is collected in an ElementCollector instance
         # that's stored in the __outputStack stack while it's being parsed. 
         # Once the end of the node is found, the ElementCollector's content
@@ -136,12 +142,16 @@ class Parser(HTMLParser):
         # compiler directives.
         for name, value in atts:
             if name == specialAttName:
-                value = self.__specialAttValuePattern.match(value)
-                if value:
+                matchedValue = self.__specialAttValuePattern.match(value)
+                if matchedValue:
                     atts = dict(atts)
                     del atts[specialAttName]
-                    omitTags, nodeType, nodeName = value.groups()
+                    omitTags, nodeType, nodeName = matchedValue.groups()
                     return True, nodeType, nodeName, omitTags, atts
+                elif self.__warn:
+                   from warnings import warn
+                   warn("Non-directive tag attribute found: %s=%r" 
+                           % (name, value))
         return False, '', '', False, renderAtts(atts)
     
     def __startTag(self, tagName, atts, isEmpty):
@@ -377,11 +387,11 @@ class Container(Node):
             self._renderNode(collector)
     
     def __attsGet(self):
-        return Attributes(self._atts)
+        return Attributes(self._atts, self._encode, self._decode)
     
     def __attsSet(self, val):
         self._atts = {}
-        atts = Attributes(self._atts)
+        atts = Attributes(self._atts, self._encode, self._decode)
         for name, value in val.items():
             atts[name] = value
     
@@ -445,11 +455,13 @@ class Attributes:
     
     __attNamePattern = re.compile('^[a-zA-Z_][-.:a-zA-Z_0-9]*$')
     
-    def __init__(self, atts):
+    def __init__(self, atts, encoder, decoder):
         self.__atts = atts # The Node's tag attributes dict.
+        self.__encode = encoder
+        self.__decode = decoder
     
     def __getitem__(self, name):
-        return self.__atts[name]
+        return self.__decode(self.__atts[name])
         
     def __setitem__(self, name, val):
         try:
@@ -459,6 +471,7 @@ class Attributes:
             if val != None:
                 if not isinstance(val, basestring):
                     raise TypeError, "bad value: %r" % val
+                val = self.__encode(val)
                 if '"' in val and "'" in val:
                     raise ValueError, "value %r contains " \
                             "both single and double quotes." % val
@@ -482,6 +495,10 @@ class Attributes:
 # support for containing plain HTML content/sub-nodes.
 
 class Content(object):
+    def __init__(self, encoder, decoder):
+        self._encode = encoder
+        self._decode = decoder
+    
     def _printStructure(self, indent):
         print indent + self._nodeType + ':' + self._nodeName
 
@@ -500,20 +517,19 @@ class PlainContent(Content):
     """
     
     def __init__(self, content, encoder, decoder):
+        Content.__init__(self, encoder, decoder)
         self.raw = content # Get/Set this element's content as raw markup;
         # use with care.
-        self.__encode = encoder
-        self.__decode = decoder
         
     def _renderContent(self, collector):
         # Called by Node classes to add HTML element's content.
         collector.append(self.raw)
     
     def __contentGet(self):
-        return self.__decode(self.raw)
+        return self._decode(self.raw)
     
     def __contentSet(self, txt):
-        self.raw = self.__encode(txt)
+        self.raw = self._encode(txt)
     
     content = property(__contentGet, __contentSet, 
             doc="Get/Set this element's content as escaped text.")
@@ -532,12 +548,11 @@ class RichContent(Content):
     __nodesDict = {}
     
     def __init__(self, content, encoder, decoder):
+        Content.__init__(self, encoder, decoder)
         self.__nodesList = content # On cloning, deep copy this list.
         self.__nodesDict = dict(
                 [(node._nodeName, node) for node in content[1::2]]) # (On clon-
         # ing: replace with a new dict built from cloned self.__nodesList.)
-        self.__encode = encoder
-        self.__decode = decoder
     
     def __rawGet(self):
         if self.__nodesDict:
@@ -552,7 +567,7 @@ class RichContent(Content):
     raw = property(__rawGet, 
             doc="Get/Set this element's raw content.")
     
-    content = property(lambda self:self.__decode(self.__rawGet()),
+    content = property(lambda self:self._decode(self.__rawGet()),
             doc="Get/Set this element's content as escaped text.")
     
     def _initRichClone(self, clone):
@@ -598,7 +613,7 @@ class RichContent(Content):
             idx = self.__nodesList.index(self.__nodesDict[name])
             self.__nodesDict[name] = self.__nodesList[idx] = value
         elif name == 'content':
-            self.__nodesList = [self.__encode(value)]
+            self.__nodesList = [self._encode(value)]
             self.__nodesDict = {}
         elif name == 'raw':
             self.__nodesList = [value]
@@ -619,6 +634,7 @@ class RichContent(Content):
 
 class EmptyContainer(NullContent, Container):
     def __init__(self, nodeName, tagName, atts, content, encoder, decoder):
+        NullContent.__init__(self, encoder, decoder)
         Container.__init__(self, nodeName, tagName, atts)
 
 
@@ -640,6 +656,7 @@ class RichContainer(RichContent, Container):
 
 class EmptyRepeater(NullContent, Repeater):
     def __init__(self, nodeName, tagName, atts, content, encoder, decoder):
+        NullContent.__init__(self, encoder, decoder)
         Repeater.__init__(self, nodeName, tagName, atts)
 
 
@@ -687,7 +704,7 @@ class Template(RichContent):
     _nodeName = ''
     
     def __init__(self, callback, html, attribute='node', 
-            codecs=(defaultEncoder, defaultDecoder)):
+            codecs=(defaultEncoder, defaultDecoder), warnings=False):
         """
             callback : function -- the function that controls how this
                     template is rendered
@@ -696,9 +713,11 @@ class Template(RichContent):
                     to hold compiler directives
             [codecs : tuple] -- a tuple containing two functions used by the 
                     content property to encode/decode HTML entities
+            [warnings : boolean] -- warn when non-directive attribute
+                    is encountered
         """
         self.__callback = callback
-        parser = Parser(attribute, codecs[0], codecs[1])
+        parser = Parser(attribute, codecs[0], codecs[1], warnings)
         parser.feed(html)
         parser.close()
         RichContent.__init__(self, parser.result(), *codecs)
